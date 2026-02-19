@@ -174,7 +174,7 @@ class WaymoOpenDataset(Dataset):
             scene_names = [] 
             scene_names_ = [f"{i:03d}" for i in range(0, 99)]
             scene_names = scene_names + scene_names_
-        self.scenes = scene_names
+        self.scenes = []
         self.image_paths = []
         self.sky_mask_paths = []
         self.dynamic_mask_path = []
@@ -189,6 +189,8 @@ class WaymoOpenDataset(Dataset):
         for scene_name in scene_names:
             scene_path = os.path.join(image_dir, scene_name, "images")
             if os.path.isdir(scene_path):
+                self.scenes.append(scene_name)
+                common_frame_keys = None
                 # image
                 if self.views == 1:
                     image_paths = sorted(
@@ -200,16 +202,38 @@ class WaymoOpenDataset(Dataset):
                     )
                     self.image_paths.append(image_paths)
                 elif self.views == 3:
-                    views_image_lists = []
+                    views_image_maps = []
                     for v in range(3):
                         suffixes = (f"_{v}.jpg", f"_{v}.png")
-                        files_v = sorted(
-                            [os.path.join(scene_path, f) for f in os.listdir(scene_path) if f.endswith(suffixes)]
+                        key_to_path = {}
+                        for f in os.listdir(scene_path):
+                            if not f.endswith(suffixes):
+                                continue
+                            stem = os.path.splitext(f)[0]
+                            view_suffix = f"_{v}"
+                            if not stem.endswith(view_suffix):
+                                continue
+                            key = stem[: -len(view_suffix)]
+                            key_to_path[key] = os.path.join(scene_path, f)
+                        views_image_maps.append(key_to_path)
+
+                    common_frame_keys = sorted(
+                        set.intersection(*[set(m.keys()) for m in views_image_maps])
+                    )
+                    if len(common_frame_keys) == 0:
+                        raise RuntimeError(f"No aligned multi-view frames in scene {scene_name}")
+
+                    lengths = [len(m) for m in views_image_maps]
+                    if len(set(lengths)) != 1 and int(os.environ.get("LOCAL_RANK", "0")) == 0:
+                        print(
+                            f"[Warn] Inconsistent image counts across views in scene {scene_name}, "
+                            f"raw={lengths}, aligned={len(common_frame_keys)}"
                         )
-                        views_image_lists.append(files_v)
-                    lengths = [len(l) for l in views_image_lists]
-                    if len(set(lengths)) != 1:
-                        raise RuntimeError(f"Inconsistent number of images across views in scene {scene_name}, lengths: {lengths}")
+
+                    views_image_lists = [
+                        [views_image_maps[v][k] for k in common_frame_keys]
+                        for v in range(3)
+                    ]
                     self.image_paths.append(views_image_lists)
 
                 # sky_mask
@@ -221,11 +245,51 @@ class WaymoOpenDataset(Dataset):
                         )
                         self.sky_mask_paths.append(sky_mask_paths)
                     elif self.views == 3:
-                        views_sky_lists = []
+                        views_sky_maps = []
                         for v in range(3):
                             suffixes = (f"_{v}.jpg", f"_{v}.png")
-                            files_v = sorted([os.path.join(sky_mask_path, f) for f in os.listdir(sky_mask_path) if f.endswith(suffixes)])
-                            views_sky_lists.append(files_v)
+                            key_to_path = {}
+                            for f in os.listdir(sky_mask_path):
+                                if not f.endswith(suffixes):
+                                    continue
+                                stem = os.path.splitext(f)[0]
+                                view_suffix = f"_{v}"
+                                if not stem.endswith(view_suffix):
+                                    continue
+                                key = stem[: -len(view_suffix)]
+                                key_to_path[key] = os.path.join(sky_mask_path, f)
+                            views_sky_maps.append(key_to_path)
+
+                        sky_common_keys = sorted(
+                            set.intersection(*[set(m.keys()) for m in views_sky_maps])
+                        )
+                        if common_frame_keys is None:
+                            aligned_keys = sky_common_keys
+                        else:
+                            sky_common_key_set = set(sky_common_keys)
+                            aligned_keys = [k for k in common_frame_keys if k in sky_common_key_set]
+
+                        if len(aligned_keys) == 0:
+                            raise RuntimeError(f"No aligned multi-view sky masks in scene {scene_name}")
+
+                        if common_frame_keys is not None and len(aligned_keys) != len(common_frame_keys):
+                            # Keep image and mask frame indices strictly aligned.
+                            key_to_idx = {k: i for i, k in enumerate(common_frame_keys)}
+                            self.image_paths[-1] = [
+                                [self.image_paths[-1][v][key_to_idx[k]] for k in aligned_keys]
+                                for v in range(3)
+                            ]
+                            common_frame_keys = aligned_keys
+                            if int(os.environ.get("LOCAL_RANK", "0")) == 0:
+                                print(
+                                    f"[Warn] Trimmed image frames to match sky masks in scene {scene_name}, "
+                                    f"aligned={len(common_frame_keys)}"
+                                )
+
+                        views_sky_lists = [
+                            [views_sky_maps[v][k] for k in common_frame_keys]
+                            for v in range(3)
+                        ]
                         self.sky_mask_paths.append(views_sky_lists)
                 else:
                     self.sky_mask_paths.append([] if self.views == 1 else [[] for _ in range(3)])
@@ -273,12 +337,46 @@ class WaymoOpenDataset(Dataset):
                         )
                         self.dynamic_mask_path.append(dynamic_mask_paths)
                     elif self.views == 3:
-                        views_dyn_lists = []
+                        views_dyn_maps = []
                         for v in range(3):
                             suffixes = (f"_{v}.jpg", f"_{v}.png")
-                            files_v = sorted([os.path.join(dynamic_mask_path, f) for f in os.listdir(dynamic_mask_path) if f.endswith(suffixes)])
-                            views_dyn_lists.append(files_v)
-                        self.dynamic_mask_path.append(views_dyn_lists)
+                            key_to_path = {}
+                            for f in os.listdir(dynamic_mask_path):
+                                if not f.endswith(suffixes):
+                                    continue
+                                stem = os.path.splitext(f)[0]
+                                view_suffix = f"_{v}"
+                                if not stem.endswith(view_suffix):
+                                    continue
+                                key = stem[: -len(view_suffix)]
+                                key_to_path[key] = os.path.join(dynamic_mask_path, f)
+                            views_dyn_maps.append(key_to_path)
+
+                        dyn_common_keys = set.intersection(*[set(m.keys()) for m in views_dyn_maps])
+                        if common_frame_keys is not None:
+                            if all(k in dyn_common_keys for k in common_frame_keys):
+                                views_dyn_lists = [
+                                    [views_dyn_maps[v][k] for k in common_frame_keys]
+                                    for v in range(3)
+                                ]
+                                self.dynamic_mask_path.append(views_dyn_lists)
+                            else:
+                                if int(os.environ.get("LOCAL_RANK", "0")) == 0:
+                                    print(
+                                        f"[Warn] Dynamic masks are not fully aligned in scene {scene_name}; "
+                                        "disabling dynamic supervision for this scene."
+                                    )
+                                self.dynamic_mask_path.append([[] for _ in range(3)])
+                        else:
+                            if len(dyn_common_keys) == 0:
+                                self.dynamic_mask_path.append([[] for _ in range(3)])
+                            else:
+                                ordered_keys = sorted(dyn_common_keys)
+                                views_dyn_lists = [
+                                    [views_dyn_maps[v][k] for k in ordered_keys]
+                                    for v in range(3)
+                                ]
+                                self.dynamic_mask_path.append(views_dyn_lists)
                 else:
                     self.dynamic_mask_path.append([] if self.views == 1 else [[] for _ in range(3)])
                 # depth
@@ -320,21 +418,56 @@ class WaymoOpenDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.scenes)
+        return len(self.image_paths)
+
+    def _seq_len(self, paths):
+        if self.views == 1:
+            return len(paths)
+        if len(paths) == 0:
+            return 0
+        return min(len(view_paths) for view_paths in paths)
 
     def __getitem__(self, idx):
         image_paths = self.image_paths[idx]
         sky_mask_paths = self.sky_mask_paths[idx]
         dynamic_mask_paths = self.dynamic_mask_path[idx]
         semantic_mask_paths = self.semantic_mask_path[idx]
-
-        start_idx = random.randint(0, max(1, len(image_paths[0] if self.views == 3 else image_paths) - 21))
+        if self.sequence_length is None or self.sequence_length < 1:
+            raise ValueError(f"Invalid sequence_length={self.sequence_length}. It must be >= 1.")
 
         if self.mode == 1:
-            indices = [start_idx]
-            intervals = sorted(random.sample(range(1, 20), self.sequence_length - 1))
-            for interval in intervals:
-                indices.append(start_idx + interval)
+            image_len = self._seq_len(image_paths)
+            sky_len = self._seq_len(sky_mask_paths)
+            available_len = min(image_len, sky_len)
+            dynamic_len = self._seq_len(dynamic_mask_paths)
+            if dynamic_len > 0:
+                available_len = min(available_len, dynamic_len)
+
+            scene_name = self.scenes[idx] if idx < len(self.scenes) else str(idx)
+            if available_len < self.sequence_length:
+                raise RuntimeError(
+                    f"Scene {scene_name} has only {available_len} aligned frames, "
+                    f"but sequence_length={self.sequence_length}."
+                )
+
+            # Use the largest valid temporal spread for this scene, capped at 19 (original behavior).
+            max_interval = min(19, available_len - 1)
+            if max_interval < 1:
+                raise RuntimeError(f"Scene {scene_name} has insufficient frames: {available_len}.")
+
+            max_start = available_len - (max_interval + 1)
+            start_idx = random.randint(0, max_start) if max_start > 0 else 0
+
+            if self.sequence_length > 1:
+                need = self.sequence_length - 1
+                if max_interval >= need:
+                    intervals = sorted(random.sample(range(1, max_interval + 1), need))
+                else:
+                    intervals = list(range(1, max_interval + 1))
+                    intervals.extend([max_interval] * (need - len(intervals)))
+            else:
+                intervals = []
+            indices = [start_idx] + [start_idx + interval for interval in intervals]
 
             #images
             if self.views == 1:
@@ -358,8 +491,9 @@ class WaymoOpenDataset(Dataset):
                         mask_seq.append(sky_mask_paths[v][i])
                 masks = load_and_preprocess_images(mask_seq)  # [S*3, C, H, W]
 
-            timestamps = np.array(indices) - start_idx
-            timestamps = timestamps / timestamps[-1] * (self.sequence_length / 4)
+            timestamps = np.array(indices, dtype=np.float32) - float(start_idx)
+            if len(timestamps) > 1 and timestamps[-1] > 0:
+                timestamps = timestamps / timestamps[-1] * (self.sequence_length / 4)
             if self.views == 3:
                 timestamps = np.repeat(timestamps, 3)
 
@@ -372,7 +506,7 @@ class WaymoOpenDataset(Dataset):
             }
 
         
-            if len(dynamic_mask_paths) > 0:
+            if dynamic_len > 0:
                 if self.views == 1:
                     dy_mask_seq = [dynamic_mask_paths[i] for i in indices]
                     dynamic_mask = load_and_preprocess_images(dy_mask_seq)  # [S, C, H, W]

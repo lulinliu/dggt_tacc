@@ -1,0 +1,16 @@
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Local logs
+logs/
+
+# Local datasets / model artifacts
+nv_data_cam123_ready/
+pretrained/
+
+# Keep only selected scripts in rectify_assets
+rectify_assets/*
+!rectify_assets/rectify_one_scene_kb.py
+!rectify_assets/rectify_train_data_dggt_v3_bulk.sh
