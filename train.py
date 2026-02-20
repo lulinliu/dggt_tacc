@@ -363,7 +363,7 @@ def main(args):
             T.ToPILImage()(combined).save(os.path.join(args.log_dir, "images", f"step_{step}_frame_{random_frame_idx}.png"))
         
         if args.local_rank == 0 and args.save_ckpt > 0 and (step + 1) % args.save_ckpt == 0:
-            ckpt_path = os.path.join(args.log_dir, "ckpt", f"model_latest.pt")
+            ckpt_path = os.path.join(args.log_dir, "ckpt", f"model_epoch_{step + 1:06d}.pt")
             torch.save(model.module.state_dict(), ckpt_path)
             print(f"[Checkpoint] Saved model at step={step} (epoch={step + 1}) to {ckpt_path}")
 
