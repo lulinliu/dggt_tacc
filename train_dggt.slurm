@@ -8,7 +8,5 @@
 #SBATCH -o /scratch/10102/hh29499/train_dggt/%x_%j.out
 #SBATCH -e /scratch/10102/hh29499/train_dggt/%x_%j.err
 
-set -euo pipefail
-
 srun --export=ALL \
   bash /scratch/10102/hh29499/longtail_train/dggt_tacc/train_dggt.sh
