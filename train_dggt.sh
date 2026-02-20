@@ -28,5 +28,6 @@ torchrun \
   --sequence_length 4 \
   --max_epoch 5000 \
   --save_ckpt 50 \
-  --no_train_dynamic_head
+  --no_train_dynamic_head \
+  2>&1 | tee "$LOG"
 
