@@ -7,6 +7,14 @@ MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 MASTER_PORT=29500   # 任意空闲端口
 NNODES=$SLURM_NNODES
 NODE_RANK=$SLURM_NODEID
+export TORCH_CUDA_ARCH_LIST="9.0"
+
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+
+export CUDAHOSTCXX=/usr/bin/g++
+
+unset CUDACXX
 
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.8}"
 
