@@ -8,15 +8,16 @@ MASTER_PORT=29500   # 任意空闲端口
 NNODES=$SLURM_NNODES
 NODE_RANK=$SLURM_NODEID
 export TORCH_CUDA_ARCH_LIST="9.0"
+export MAX_JOBS="${MAX_JOBS:-1}"
+export CUDA_HOME=/opt/apps/cuda/12.4
+export PATH="$CUDA_HOME/bin:$PATH"
+export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+export CPATH="$CUDA_HOME/include:${CPATH:-}"
 
-export CC=/usr/bin/gcc
-export CXX=/usr/bin/g++
+unset NVCC_PREPEND_FLAGS
 
-export CUDAHOSTCXX=/usr/bin/g++
-
-unset CUDACXX
-
-export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.8}"
+export TORCH_EXTENSIONS_DIR=/scratch/10102/hh29499/torch_extensions_cache
+mkdir -p "$TORCH_EXTENSIONS_DIR"
 
 LOG_DIR="/scratch/10102/hh29499/longtail_train/dggt_tacc/logs"
 mkdir -p "${LOG_DIR}"
