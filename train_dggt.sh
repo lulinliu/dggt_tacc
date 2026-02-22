@@ -14,6 +14,16 @@ export PATH="$CUDA_HOME/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export CPATH="$CUDA_HOME/include:${CPATH:-}"
 
+export NVCC_PREPEND_FLAGS="--compiler-bindir=/usr/bin/g++"
+export CC=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
+export CXX=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
+export CUDAHOSTCXX=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
+
+# 可选：确保 nvcc 也明确用 nvc++
+export NVCC_PREPEND_FLAGS="--compiler-bindir=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++"
+
+
+
 unset NVCC_PREPEND_FLAGS
 
 export TORCH_EXTENSIONS_DIR=/scratch/10102/hh29499/torch_extensions_cache
