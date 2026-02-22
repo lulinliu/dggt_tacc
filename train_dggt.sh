@@ -8,6 +8,11 @@ module load cuda/12.4
 source /scratch/10102/hh29499/anaconda/etc/profile.d/conda.sh
 conda activate /scratch/10102/hh29499/anaconda/envs/dggt310
 
+echo "CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV"
+echo "CONDA_PREFIX=$CONDA_PREFIX"
+which python
+python -c "import sys; print('python:', sys.executable)"
+
 MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 MASTER_PORT=29500   # 任意空闲端口
 NNODES=$SLURM_NNODES
