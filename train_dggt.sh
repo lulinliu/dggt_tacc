@@ -8,24 +8,23 @@ MASTER_PORT=29500   # 任意空闲端口
 NNODES=$SLURM_NNODES
 NODE_RANK=$SLURM_NODEID
 export TORCH_CUDA_ARCH_LIST="9.0"
-export MAX_JOBS="${MAX_JOBS:-1}"
+export MAX_JOBS=1
+
+# Use system CUDA (complete toolkit)
 export CUDA_HOME=/opt/apps/cuda/12.4
 export PATH="$CUDA_HOME/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export CPATH="$CUDA_HOME/include:${CPATH:-}"
 
-export NVCC_PREPEND_FLAGS="--compiler-bindir=/usr/bin/g++"
+# IMPORTANT: nvcc host compiler must be C++ compiler (nvc++), not nvc
 export CC=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
 export CXX=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
 export CUDAHOSTCXX=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
 
-# 可选：确保 nvcc 也明确用 nvc++
+# Force nvcc to use nvc++ even if something injects CC=nvc
 export NVCC_PREPEND_FLAGS="--compiler-bindir=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++"
 
-
-
-unset NVCC_PREPEND_FLAGS
-
+# Cache torch extensions (optional but recommended)
 export TORCH_EXTENSIONS_DIR=/scratch/10102/hh29499/torch_extensions_cache
 mkdir -p "$TORCH_EXTENSIONS_DIR"
 
