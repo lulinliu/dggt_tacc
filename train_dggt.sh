@@ -2,6 +2,11 @@
 set -euo pipefail
 
 cd /scratch/10102/hh29499/longtail_train/dggt_tacc
+module purge
+module load cuda/12.4
+
+source /scratch/10102/hh29499/anaconda/etc/profile.d/conda.sh
+conda activate /scratch/10102/hh29499/anaconda/envs/dggt310
 
 MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 MASTER_PORT=29500   # 任意空闲端口
