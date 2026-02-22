@@ -17,10 +17,15 @@ export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export CPATH="$CUDA_HOME/include:${CPATH:-}"
 
 # IMPORTANT: nvcc host compiler must be C++ compiler (nvc++), not nvc
-export CC=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
-export CXX=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
-export CUDAHOSTCXX=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++
+unset TACC_CC TACC_CXX
+unset NVCC_PREPEND_FLAGS
 
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+export CUDAHOSTCXX=/usr/bin/g++
+
+# make nvcc use g++ as host compiler
+export NVCC_PREPEND_FLAGS="--compiler-bindir=/usr/bin/g++"
 # Force nvcc to use nvc++ even if something injects CC=nvc
 export NVCC_PREPEND_FLAGS="--compiler-bindir=/home1/apps/nvidia/Linux_aarch64/24.7/compilers/bin/nvc++"
 
