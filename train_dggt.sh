@@ -46,7 +46,7 @@ mkdir -p "$TORCH_EXTENSIONS_DIR"
 LOG_DIR="/scratch/10102/hh29499/longtail_train/dggt_tacc/logs"
 mkdir -p "${LOG_DIR}"
 LOG="${LOG_DIR}/train_${SLURM_JOB_ID:-manual}_node${NODE_RANK}_$(date +%Y%m%d_%H%M%S).log"
-
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 torchrun \
   --nnodes=$NNODES \
   --nproc_per_node 1 \
