@@ -58,9 +58,9 @@ torchrun \
   --log_dir /scratch/10102/hh29499/longtail_train/dggt_tacc/logs \
   --ckpt_path /scratch/10102/hh29499/longtail_train/dggt_tacc/pretrained/model.pt \
   --input_views 3 \
-  --sequence_length 4 \
+  --sequence_length 3 \
   --max_epoch 5000 \
-  --save_ckpt 50 \
+  --save_ckpt 20 \
   --no_train_dynamic_head \
   2>&1 | tee "$LOG"
 
